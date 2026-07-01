@@ -1,0 +1,16 @@
+{
+  "nodeModulesDir": "auto",
+  "imports": {
+    "express": "npm:express@^5",
+    "@apollo/server": "npm:@apollo/server@^5",
+    "@apollo/subgraph": "npm:@apollo/subgraph@^2",
+    "drizzle-orm": "npm:drizzle-orm@1.0.0-beta.20",
+    "drizzle-orm/": "npm:/drizzle-orm@1.0.0-beta.20/",
+    "pg": "npm:pg@^8",
+    "graphql": "npm:graphql@^16",
+    "pino": "npm:pino@^10",
+    "ky": "npm:ky@^2.0.2",
+    "@panva/jose": "jsr:@panva/jose@^6",
+    "@std/encoding": "jsr:@std/encoding@^1"
+  }
+}

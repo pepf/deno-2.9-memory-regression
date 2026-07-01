@@ -1,0 +1,7 @@
+# Deno / node
+node_modules/
+deno.lock
+.deno/
+
+# OS
+.DS_Store
