@@ -1,5 +1,12 @@
 # Deno 2.9 memory regression — minimal reproduction
 
+> **Fixed in 2.9.2.** This repro was filed upstream as
+> [denoland/deno#35664](https://github.com/denoland/deno/issues/35664) and confirmed
+> fixed in 2.9.2 (maintainer: "yes", scheduled for 2.9.2). Re-running this exact
+> harness against `denoland/deno:2.9.2` shows both regressions gone — baseline and
+> `--watch` growth are now *better* than 2.8.0. See [Update: 2.9.2](#update-292)
+> below; the original 2.9.0/2.9.1 report follows for reference.
+
 Two independent memory regressions in Deno **2.9** vs **2.8.0**, on a realistic
 npm-dominant module graph with a couple of `jsr:` deps mixed in (the shape of a
 typical Deno backend). No application logic — the server only imports the deps
@@ -23,7 +30,7 @@ its own container with a fresh cache, so the only variable is the Deno binary.
 
 ```bash
 ./bench.sh
-# or: IMAGES="denoland/deno:2.8.0 denoland/deno:2.9.0 denoland/deno:2.9.1" RELOADS=8 SETTLE=12 ./bench.sh
+# or: IMAGES="denoland/deno:2.8.0 denoland/deno:2.9.0 denoland/deno:2.9.1 denoland/deno:2.9.2" RELOADS=8 SETTLE=12 ./bench.sh
 ```
 
 ## What it measures
@@ -73,3 +80,37 @@ npm/node-compat module handling, not a V8 change.
 - For dev hot-reload, use a fresh-process reloader instead of `--watch`, e.g.
   `watchexec -r -e ts -- deno run --allow-all server.ts` — this eliminates the
   per-reload leak entirely on any version.
+- Or just upgrade to **2.9.2+** — see below, the regression is fixed there.
+
+## Update: 2.9.2
+
+Re-ran the unmodified harness (`IMAGES="denoland/deno:2.8.0 denoland/deno:2.9.2"
+RELOADS=6 SETTLE=12 ./bench.sh`) on the same machine/setup as the original report.
+Both regressions are resolved — 2.9.2 now beats 2.8.0 on baseline and plateaus
+under `--watch` instead of leaking:
+
+| Metric | Deno 2.8.0 | Deno 2.9.0 | Deno 2.9.2 |
+| --- | --- | --- | --- |
+| baseline (plain `deno run`, idle) | 115 MB | 561 MB (~4.9×) | **102 MB** |
+| `--watch` growth per reload | ~12 MB | ~472 MB (~40×) | **~1.5 MB, plateauing** |
+| RSS after 6 reloads | 183 MB | 3388 MB | **107 MB** |
+
+Full run:
+
+```
+== denoland/deno:2.8.0 ==          == denoland/deno:2.9.2 ==
+  baseline .......  115 MB           baseline .......  102 MB
+  reload #0 ......  110 MB           reload #0 ......   98 MB
+  reload #1 ......  125 MB           reload #1 ......  101 MB
+  reload #2 ......  137 MB           reload #2 ......  104 MB
+  reload #3 ......  150 MB           reload #3 ......  105 MB
+  reload #4 ......  161 MB           reload #4 ......  106 MB
+  reload #5 ......  173 MB           reload #5 ......  107 MB
+  reload #6 ......  184 MB           reload #6 ......  107 MB
+```
+
+At reload #6, 2.9.0 was at ~3.4 GB; 2.9.2 is at 107 MB — same harness, same
+graph, same reload count. 2.9.2's RSS also plateaus (107 → 107 MB from reload #5
+to #6) rather than still climbing like 2.8.0's slow ~12 MB/reload creep, though
+distinguishing a true plateau from a longer-period reclaim cycle would need a
+much longer soak (the upstream reporters used 45–60 reloads for that).
